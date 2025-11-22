@@ -12,8 +12,9 @@ import { LobbyComponent } from './components/lobby.component';
 import { ActiveGameComponent } from './components/active-game.component';
 import { ChatDrawerComponent } from './components/chat-drawer.component';
 import { ScoreboardComponent } from './components/scoreboard.component';
+import { DiscoverComponent } from './components/discover.component';
 
-export type ViewState = 'ROOMS' | 'GAME' | 'RANK' | 'PROFILE';
+export type ViewState = 'ROOMS' | 'GAME' | 'RANK' | 'PROFILE' | 'DISCOVER';
 
 @Component({
   selector: 'app-root',
@@ -26,7 +27,8 @@ export type ViewState = 'ROOMS' | 'GAME' | 'RANK' | 'PROFILE';
     LobbyComponent,
     ActiveGameComponent,
     ChatDrawerComponent,
-    ScoreboardComponent
+    ScoreboardComponent,
+    DiscoverComponent
   ],
   template: `
     <div class="h-screen w-screen bg-[#0F111A] text-white overflow-hidden flex flex-col font-sans relative">
@@ -38,6 +40,7 @@ export type ViewState = 'ROOMS' | 'GAME' | 'RANK' | 'PROFILE';
            @switch (currentView()) {
              @case ('PROFILE') { <app-profile (close)="navTo('ROOMS')" /> }
              @case ('ROOMS') { <app-room-list /> }
+             @case ('DISCOVER') { <app-discover /> }
              @case ('GAME') { 
                 <!-- Game Logic: If state is MENU, show empty state, else show Active Game -->
                 @if(gameService.gameState() === 'MENU') {
@@ -65,11 +68,19 @@ export type ViewState = 'ROOMS' | 'GAME' | 'RANK' | 'PROFILE';
           <nav class="absolute bottom-0 left-0 w-full h-[70px] bg-[#1A1D29]/95 backdrop-blur-md border-t border-white/5 flex justify-around items-center px-2 z-50 shadow-2xl">
               
               <!-- Home / Rooms -->
-              <button (click)="navTo('ROOMS')" class="flex flex-col items-center gap-1 p-2 w-16 group">
+              <button (click)="navTo('ROOMS')" class="flex flex-col items-center gap-1 p-2 w-14 group">
                   <div class="text-2xl transition-transform group-hover:-translate-y-1" [class.text-white]="currentView() === 'ROOMS'" [class.text-slate-600]="currentView() !== 'ROOMS'">
                       🏠
                   </div>
-                  <span class="text-[9px] font-bold uppercase" [class.text-white]="currentView() === 'ROOMS'" [class.text-slate-600]="currentView() !== 'ROOMS'">Parti</span>
+                  <span class="text-[9px] font-bold uppercase" [class.text-white]="currentView() === 'ROOMS'" [class.text-slate-600]="currentView() !== 'ROOMS'">Ana Sayfa</span>
+              </button>
+
+              <!-- Discover (NEW) -->
+              <button (click)="navTo('DISCOVER')" class="flex flex-col items-center gap-1 p-2 w-14 group">
+                  <div class="text-2xl transition-transform group-hover:-translate-y-1" [class.text-blue-400]="currentView() === 'DISCOVER'" [class.text-slate-600]="currentView() !== 'DISCOVER'">
+                      🔍
+                  </div>
+                  <span class="text-[9px] font-bold uppercase" [class.text-blue-400]="currentView() === 'DISCOVER'" [class.text-slate-600]="currentView() !== 'DISCOVER'">Keşfet</span>
               </button>
 
               <!-- Create / Speak (Smart Button) -->
@@ -80,7 +91,7 @@ export type ViewState = 'ROOMS' | 'GAME' | 'RANK' | 'PROFILE';
               </div>
 
               <!-- Rank / Score -->
-              <button (click)="navTo('RANK')" class="flex flex-col items-center gap-1 p-2 w-16 group">
+              <button (click)="navTo('RANK')" class="flex flex-col items-center gap-1 p-2 w-14 group">
                   <div class="text-2xl transition-transform group-hover:-translate-y-1" [class.text-yellow-500]="currentView() === 'RANK'" [class.text-slate-600]="currentView() !== 'RANK'">
                       🏆
                   </div>
@@ -88,7 +99,7 @@ export type ViewState = 'ROOMS' | 'GAME' | 'RANK' | 'PROFILE';
               </button>
 
               <!-- Profile -->
-              <button (click)="navTo('PROFILE')" class="flex flex-col items-center gap-1 p-2 w-16 group">
+              <button (click)="navTo('PROFILE')" class="flex flex-col items-center gap-1 p-2 w-14 group">
                   <div class="w-7 h-7 rounded-full overflow-hidden border-2 transition-colors" [class.border-white]="currentView() === 'PROFILE'" [class.border-transparent]="currentView() !== 'PROFILE'">
                       <img [src]="user.avatar" class="w-full h-full object-cover bg-slate-800">
                   </div>
@@ -112,12 +123,10 @@ export class AppComponent {
   currentView = signal<ViewState>('ROOMS');
 
   constructor() {
-    // Effect to handle view switching based on game state changes (e.g. when game starts)
     effect(() => {
         const state = this.gameService.gameState();
         if (state !== 'MENU' && state !== 'SOCIAL') {
-            // If a game is active/running, ensure we are on the GAME view
-            // But allow user to navigate away if they want (handled by navTo)
+            // If game is active
         }
     });
   }
@@ -127,8 +136,6 @@ export class AppComponent {
   }
 
   showBottomNav(): boolean {
-      // Hide the main bottom nav when inside the Active Game view.
-      // The Active Game component has its own "Talkin-style" bottom bar.
       if (this.currentView() === 'GAME' && this.gameService.gameState() !== 'MENU') {
           return false;
       }
@@ -136,14 +143,10 @@ export class AppComponent {
   }
 
   handleMiddleButton() {
-      // This button usually opens the "Create Room" modal.
-      // Since the modal is inside RoomListComponent, we nav there and trigger it conceptually.
-      // Ideally, we'd use a shared UI service to open the modal from anywhere.
-      // For now, navigate to ROOMS which has the creation interface.
       if (this.gameService.gameState() !== 'MENU') {
-          this.navTo('GAME'); // Return to active game
+          this.navTo('GAME');
       } else {
-          this.navTo('ROOMS'); // Go to rooms to create one
+          this.navTo('ROOMS'); 
       }
   }
 }

@@ -66,15 +66,13 @@ import { SocialService } from '../services/social.service';
               </button>
 
               @if (!settings.isPublished) {
-                <button (click)="publishRoom()" class="w-full py-3 bg-yellow-500 text-black font-bold rounded-lg hover:brightness-110">
-                  ODAYI YAYINLA
+                <button (click)="publishRoom()" class="w-full py-3 bg-yellow-500 text-black font-bold rounded-lg hover:brightness-110 shadow-lg shadow-yellow-500/20 transition-transform active:scale-95">
+                  PARTİYİ YAYINLA 🌍
                 </button>
               } @else {
-                 <div class="p-4 bg-black/30 rounded border border-slate-700 text-center">
-                    <p class="text-slate-400 text-xs mb-2">Oyuncuları Davet Et</p>
-                    <div class="text-white font-mono bg-slate-800 p-2 rounded text-sm select-all">
-                      dilavcilar.app/{{settings.roomId}}
-                    </div>
+                 <div class="p-4 bg-green-900/20 rounded border border-green-500/30 text-center">
+                    <p class="text-green-400 text-xs font-bold mb-1">YAYINLANDI</p>
+                    <p class="text-slate-400 text-[10px]">Odanız ana sayfada listeleniyor.</p>
                  </div>
               }
             </div>
@@ -118,8 +116,8 @@ import { SocialService } from '../services/social.service';
              
              <div class="mt-4 flex justify-end">
                 <button (click)="startGame()" [disabled]="gameService.players().length < 2"
-                  class="px-8 py-3 bg-green-600 text-white font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 transition-transform shadow-lg">
-                  BAŞLAT 🚀
+                  class="px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-black text-lg rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 transition-transform shadow-[0_0_20px_rgba(34,197,94,0.4)]">
+                  PARTİYİ BAŞLAT 🚀
                 </button>
              </div>
           </div>
@@ -134,7 +132,7 @@ export class LobbyComponent {
 
   get settings() { return this.gameService.settings(); }
   publishRoom() { this.gameService.publishRoom(); }
-  startGame() { this.gameService.startGame(); }
+  startGame() { this.gameService.startGameLoop(); }
 
   fillWithBots() {
     const needed = 11;

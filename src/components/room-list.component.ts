@@ -50,12 +50,16 @@ import { AppComponent } from '../app.component';
              </div>
          </div>
 
-         <!-- Live Rooms -->
-         @for(room of dummyRooms; track room.id) {
+         <!-- Public Rooms (Real Data) -->
+         @for(room of gameService.publicRooms(); track room.id) {
              <div (click)="joinRoom(room.id)" class="bg-[#161922] rounded-2xl p-4 border border-white/5 hover:border-white/20 transition-all cursor-pointer group">
                  <div class="flex justify-between items-start mb-3">
                      <h3 class="text-white font-bold text-lg leading-tight group-hover:text-blue-400 transition-colors">{{ room.title }}</h3>
-                     <span class="bg-green-900/30 text-green-400 text-[10px] font-bold px-2 py-1 rounded animate-pulse">LIVE</span>
+                     @if(room.isLive) {
+                        <span class="bg-green-900/30 text-green-400 text-[10px] font-bold px-2 py-1 rounded animate-pulse">CANLI</span>
+                     } @else {
+                        <span class="bg-yellow-900/30 text-yellow-400 text-[10px] font-bold px-2 py-1 rounded">HAZIRLIK</span>
+                     }
                  </div>
                  
                  <div class="flex items-center gap-4">
@@ -85,11 +89,11 @@ import { AppComponent } from '../app.component';
               <div class="bg-[#1A1D29] w-full md:max-w-md p-6 rounded-t-3xl md:rounded-3xl border-t border-white/10 shadow-2xl animate-slide-up">
                   <div class="w-12 h-1 bg-slate-700 rounded-full mx-auto mb-6"></div>
                   
-                  <h2 class="text-2xl font-bold text-white mb-6 text-center">Oda Başlat</h2>
+                  <h2 class="text-2xl font-bold text-white mb-6 text-center">Parti Başlat</h2>
                   
                   <div class="space-y-4 mb-8">
                       <div>
-                          <label class="text-xs text-slate-500 font-bold uppercase mb-1 block">Oda Konusu</label>
+                          <label class="text-xs text-slate-500 font-bold uppercase mb-1 block">Parti Adı</label>
                           <input [(ngModel)]="newRoomName" placeholder="Örn: İngilizce Pratik" class="w-full bg-black/50 border border-slate-700 rounded-xl p-3 text-white outline-none focus:border-blue-500">
                       </div>
                       <div class="grid grid-cols-2 gap-4">
@@ -102,7 +106,7 @@ import { AppComponent } from '../app.component';
                           <div>
                               <label class="text-xs text-slate-500 font-bold uppercase mb-1 block">Zorluk</label>
                               <select [(ngModel)]="newRoomDiff" class="w-full bg-black/50 border border-slate-700 rounded-xl p-3 text-white outline-none">
-                                  <option>Kolay</option><option>Orta</option><option>Zor</option>
+                                  <option>Kolay</option><option>Orta</option><option>Zor</option><option>Expert</option>
                               </select>
                           </div>
                       </div>
@@ -111,7 +115,7 @@ import { AppComponent } from '../app.component';
                   <div class="flex gap-3">
                       <button (click)="showCreateModal = false" class="flex-1 py-3 bg-slate-800 text-white font-bold rounded-xl">İptal</button>
                       <button (click)="createRoom()" class="flex-[2] py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-xl shadow-lg hover:scale-[1.02] transition-transform">
-                          Partiyi Başlat 🚀
+                          Partiyi Kur 🚀
                       </button>
                   </div>
               </div>
@@ -135,13 +139,6 @@ export class RoomListComponent {
   newRoomName = '';
   newRoomLang = 'İngilizce';
   newRoomDiff: any = 'Orta';
-
-  // Dummy Data for UI
-  dummyRooms = [
-      { id: '1', title: '🇺🇸 English Speaking Practice', count: 12, avatars: ['https://api.dicebear.com/7.x/avataaars/svg?seed=Alice', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bob', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Charlie'], tags: ['İngilizce', 'Sohbet'] },
-      { id: '2', title: 'Gece Sohbeti & Müzik 🌙', count: 5, avatars: ['https://api.dicebear.com/7.x/avataaars/svg?seed=David', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Eve'], tags: ['Türkçe', 'Chill'] },
-      { id: '3', title: 'Dil Avcıları Yarışması 🏆', count: 24, avatars: ['https://api.dicebear.com/7.x/avataaars/svg?seed=Frank', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Grace', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Hank'], tags: ['Yarışma', 'Ödüllü'] }
-  ];
 
   openCreateModal() {
       this.newRoomName = 'Parti #' + Math.floor(Math.random() * 1000);

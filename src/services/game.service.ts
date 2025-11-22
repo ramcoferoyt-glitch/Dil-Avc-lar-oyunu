@@ -24,6 +24,16 @@ export interface GameSettings {
   isChatLocked: boolean;
 }
 
+export interface RoomSummary {
+  id: string;
+  title: string;
+  language: string;
+  count: number;
+  avatars: string[];
+  tags: string[];
+  isLive: boolean;
+}
+
 export interface Player {
   id: string;
   name: string;
@@ -69,6 +79,11 @@ export class GameService {
   private authService = inject(AuthService);
   private socialService = inject(SocialService);
 
+  private readonly ROOMS_DB_KEY = 'dilavcilar_rooms_db_v1';
+
+  // --- PUBLIC ROOMS DATABASE (Persistent) ---
+  publicRooms = signal<RoomSummary[]>([]);
+
   settings = signal<GameSettings>({
     roomId: 'RM-' + Math.floor(Math.random() * 10000),
     roomName: 'DİL AVCILARI',
@@ -84,7 +99,8 @@ export class GameService {
 
   availableLanguages = [
     'Türkçe', 'İngilizce', 'Kürtçe', 'Arapça', 'İspanyolca', 
-    'Almanca', 'Fransızca', 'Çince', 'Rusça', 'İtalyanca', 'Japonca', 'Portekizce'
+    'Almanca', 'Fransızca', 'Çince', 'Rusça', 'İtalyanca', 
+    'Japonca', 'Portekizce', 'Farsça', 'Azerice', 'Osmanlıca', 'Korece'
   ];
 
   gameState = signal<GameState>('MENU'); 
@@ -124,11 +140,30 @@ export class GameService {
   private timerInterval: any;
   private currentRoundDeckMap: Map<number | string, CardType> = new Map();
 
+  constructor() {
+      this.loadRooms();
+  }
+
+  private loadRooms() {
+      try {
+          const stored = localStorage.getItem(this.ROOMS_DB_KEY);
+          if (stored) {
+              this.publicRooms.set(JSON.parse(stored));
+          }
+      } catch (e) { console.error('Room DB Error'); }
+  }
+
+  private saveRooms(rooms: RoomSummary[]) {
+      this.publicRooms.set(rooms);
+      localStorage.setItem(this.ROOMS_DB_KEY, JSON.stringify(rooms));
+  }
+
   createNewRoom(settings: Partial<GameSettings>) {
     this.settings.update(s => ({
       ...s,
       ...settings,
       roomId: 'RM-' + Math.floor(1000 + Math.random() * 9000),
+      isPublished: false // Reset published state for new room
     }));
     this.players.set([]); 
     const me = this.authService.currentUser();
@@ -136,8 +171,34 @@ export class GameService {
     this.gameState.set('SOCIAL');
   }
 
+  publishRoom() {
+      this.settings.update(s => ({ ...s, isPublished: true }));
+      
+      const current = this.settings();
+      const summary: RoomSummary = {
+          id: current.roomId,
+          title: current.roomName,
+          language: current.targetLanguage,
+          count: this.players().length,
+          avatars: this.players().slice(0,3).map(p => p.avatar),
+          tags: [current.targetLanguage, current.mode === 'TEAM' ? 'Takım Savaşı' : 'Yarışma'],
+          isLive: false 
+      };
+
+      const existing = this.publicRooms();
+      // Update if exists, else add
+      const filtered = existing.filter(r => r.id !== summary.id);
+      this.saveRooms([summary, ...filtered]);
+  }
+
   enterRoom(id: string) {
     this.gameState.set('SOCIAL');
+    // Find room info
+    const room = this.publicRooms().find(r => r.id === id);
+    if(room) {
+        this.settings.update(s => ({...s, roomName: room.title, targetLanguage: room.language, roomId: id}));
+    }
+    
     const me = this.authService.currentUser();
     if (me && !this.players().some(p => p.id === me.id)) {
        this.addPlayer(me.username, false, me.avatar, me.id, me.gender as any, false);
@@ -176,6 +237,16 @@ export class GameService {
     });
     
     if (this.players().length > 1 && !this.isGlobalSoundMuted()) this.audioService.playOrbClick(); 
+    
+    // Update room count in DB if published
+    if (this.settings().isPublished) this.updateRoomCountInDB();
+  }
+
+  private updateRoomCountInDB() {
+      const rid = this.settings().roomId;
+      const count = this.players().length;
+      const rooms = this.publicRooms().map(r => r.id === rid ? { ...r, count } : r);
+      this.saveRooms(rooms);
   }
 
   addBotPlayer(bot: SocialUser) {
@@ -205,6 +276,7 @@ export class GameService {
      };
      this.players.update(list => [...list, newPlayer]);
      if(!this.isGlobalSoundMuted()) this.audioService.playOrbClick();
+     if (this.settings().isPublished) this.updateRoomCountInDB();
   }
 
   addSingleBot() {
@@ -232,6 +304,12 @@ export class GameService {
 
   startGameLoop() {
     this.settings.update(s => ({ ...s, isChatLocked: true }));
+    
+    // Update public room status to Live
+    const rid = this.settings().roomId;
+    const rooms = this.publicRooms().map(r => r.id === rid ? { ...r, isLive: true } : r);
+    this.saveRooms(rooms);
+
     if(!this.isGlobalSoundMuted()) this.audioService.playGameStart();
     this.resetRoundStatus();
     this.runTransition('1. TUR', 'HIZLI & ÖFKELİ', 'ROUND_1');
@@ -558,17 +636,28 @@ export class GameService {
       this.gameState.set('MENU'); 
       this.audioService.stopTension();
       this.settings.update(s => ({...s, isChatLocked: false}));
+      
+      // Remove me from players if leaving properly
+      const me = this.authService.currentUser();
+      if(me) {
+          this.players.update(list => list.filter(p => p.id !== me.id));
+          if(this.settings().isPublished) this.updateRoomCountInDB();
+      }
   }
   
   kickPlayer(id: string) {
     const p = this.players().find(x => x.id === id);
     if(p && !p.isPatron) {
         this.players.update(list => list.filter(x => x.id !== id));
+        if(this.settings().isPublished) this.updateRoomCountInDB();
     }
   }
 
   saveSettings() {
-      // Confirmed save
+      // If room is published, update its metadata in public list
+      if(this.settings().isPublished) {
+          this.updateRoomCountInDB();
+      }
   }
 
   makeSpy(id: string) {
